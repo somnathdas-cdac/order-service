@@ -1,1 +1,42 @@
 
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  order-db:
+    image: mysql:8.0
+    container_name: order-db-container
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: Som1234567
+      MYSQL_DATABASE: micro_service_order_db
+    volumes:
+      - mysql_order_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Order Service Application
+  order-service:
+    build: .
+    container_name: order-service-container
+    ports:
+      - "8082:8082"
+    environment:
+      # Overriding properties to use the MySQL container name instead of localhost
+      SPRING_DATASOURCE_URL: jdbc:mysql://order-db:3306/micro_service_order_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Som1234567
+      # Overriding Eureka server zone if it runs on the target VM or network
+      EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    depends_on:
+      order-db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  mysql_order_data:
